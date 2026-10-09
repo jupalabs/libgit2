@@ -17,6 +17,8 @@ DIST_DIR="${ROOT_DIR}/dist"
 WORK_DIR="${TMPDIR:-/tmp}/pushysh-libgit2-build"
 
 LIBGIT2_VERSION="1.9.2"
+# Bump whenever flags or patches change the built archive.
+LIBGIT2_BUILD="2"
 LIBSSH2_VERSION="1.11.1"
 MBEDTLS_VERSION="3.6.2"
 
@@ -66,7 +68,8 @@ cmake \
     -DENABLE_PROGRAMS=OFF \
     -DENABLE_TESTING=OFF \
     -DUSE_SHARED_MBEDTLS_LIBRARY=OFF \
-    -DUSE_STATIC_MBEDTLS_LIBRARY=ON
+    -DUSE_STATIC_MBEDTLS_LIBRARY=ON \
+    -DMBEDTLS_FATAL_WARNINGS=OFF
 cmake --build "${WORK_DIR}/build/mbedtls" --config Release --target install
 
 # ---------------------------------------------------------------------------
@@ -101,6 +104,11 @@ LIBGIT2_SRC="${WORK_DIR}/src/libgit2"
 fetch_tarball \
     "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.tar.gz" \
     "${LIBGIT2_SRC}"
+
+# Upstream fixes not yet in a release. See patches/README.md.
+for patch in "${ROOT_DIR}"/patches/libgit2/*.patch; do
+    patch -d "${LIBGIT2_SRC}" -p1 --forward --quiet < "${patch}"
+done
 
 cmake \
     -S "${LIBGIT2_SRC}" \
@@ -194,12 +202,12 @@ Build complete.
   sha256      : ${SHA256}
 
 Versions:
-  libgit2     v${LIBGIT2_VERSION}
+  libgit2     v${LIBGIT2_VERSION} (build ${LIBGIT2_BUILD})
   libssh2     v${LIBSSH2_VERSION}
   mbedTLS     v${MBEDTLS_VERSION}
 
 Next steps:
-  1. git tag libgit2-v${LIBGIT2_VERSION}-1 && git push origin libgit2-v${LIBGIT2_VERSION}-1
+  1. git tag libgit2-v${LIBGIT2_VERSION}-${LIBGIT2_BUILD} && git push origin libgit2-v${LIBGIT2_VERSION}-${LIBGIT2_BUILD}
   2. Create a GitHub Release on that tag and upload libgit2.xcframework.zip.
   3. In Pushy, set Packages/LibGit2Runtime/Package.swift binaryTarget to:
        url:      <release asset URL>
